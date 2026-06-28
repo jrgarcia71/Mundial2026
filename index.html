@@ -557,17 +557,98 @@ function recalcStandings() {
 }
 
 function getClassified() {
-  // Returns {1st, 2nd} per group + best 8 thirds
+  // Returns {1st, 2nd} per group + best 8 thirds (group letters)
   const firsts = {}, seconds = {}, thirds = [];
   for (const g in GRUPOS) {
     const s = state.standings[g];
     firsts[g] = s[0].name;
     seconds[g] = s[1].name;
-    thirds.push({ group: g, ...s[2] });
+    thirds.push({ group: g, name: s[2].name, pts: s[2].pts, gf: s[2].gf, gc: s[2].gc });
   }
-  // Sort thirds by pts, gd, gf
+  // Sort thirds by pts, gd, gf (FIFA tiebreak order; fair play/ranking not modeled)
   thirds.sort((a,b) => b.pts - a.pts || (b.gf-b.gc)-(a.gf-a.gc) || b.gf - a.gf);
-  return { firsts, seconds, thirds8: thirds.slice(0,8).map(t => t.name) };
+  const thirds8 = thirds.slice(0,8); // {group, name, pts, gf, gc}
+  return { firsts, seconds, thirds8 };
+}
+
+// ============================================================
+// FIFA R16 CROSS-MATCHING MATRIX
+// Priority order per leader group, applied to whichever qualifying
+// thirds are present. First match in the priority list wins.
+// Source: FIFA official 495-combination assignment table.
+// ============================================================
+const LEADER_THIRD_PRIORITY = {
+  A: ['E','C'],                 // 1A vs 3E, else 3C
+  B: ['G','J','E','I'],         // 1B vs 3G, else 3J, else 3E, else 3I
+  D: ['B'],                     // 1D vs 3B only
+  E: ['C','D','F'],             // 1E vs 3C, else 3D, else 3F
+  G: ['A','J','I'],             // 1G vs 3A, else 3J, else 3I
+  I: ['F','G'],                 // 1I vs 3F, else 3G
+  K: ['L','D','I','E'],         // 1K vs 3L, else 3D, else 3I, else 3E
+  L: ['K','I'],                 // 1L vs 3K, else 3I
+};
+
+// Fixed cruces (don't depend on thirds): [home_ref, away_ref]
+// Using {type:'1'|'2', group:'X'}
+const FIXED_R16 = [
+  { home:{t:'2',g:'A'}, away:{t:'2',g:'B'} },   // 2A vs 2B
+  { home:{t:'1',g:'F'}, away:{t:'2',g:'C'} },   // 1F vs 2C
+  { home:{t:'2',g:'K'}, away:{t:'2',g:'L'} },   // 2K vs 2L
+  { home:{t:'1',g:'H'}, away:{t:'2',g:'J'} },   // 1H vs 2J
+  { home:{t:'1',g:'C'}, away:{t:'2',g:'F'} },   // 1C vs 2F
+  { home:{t:'2',g:'E'}, away:{t:'2',g:'I'} },   // 2E vs 2I
+  { home:{t:'1',g:'J'}, away:{t:'2',g:'H'} },   // 1J vs 2H
+  { home:{t:'2',g:'D'}, away:{t:'2',g:'G'} },   // 2D vs 2G
+];
+
+const VARIABLE_LEADERS = ['A','B','D','E','G','I','K','L'];
+
+function resolveR16Crosses() {
+  const { firsts, seconds, thirds8 } = getClassified();
+  const qualifiedThirdGroups = thirds8.map(t => t.group); // e.g. ['F','E','B','D','I','G','L','A']
+
+  // Assign each variable leader to a third, respecting priority + availability,
+  // and ensuring each qualified third is used exactly once.
+  const usedThirds = new Set();
+  const leaderVsThird = {}; // leaderGroup -> thirdGroup
+
+  // Greedy assignment: leaders with fewest options go first (most constrained first)
+  const leadersSorted = [...VARIABLE_LEADERS].sort((a,b) =>
+    LEADER_THIRD_PRIORITY[a].length - LEADER_THIRD_PRIORITY[b].length
+  );
+
+  for (const leader of leadersSorted) {
+    const options = LEADER_THIRD_PRIORITY[leader].filter(g => qualifiedThirdGroups.includes(g) && !usedThirds.has(g));
+    if (options.length > 0) {
+      leaderVsThird[leader] = options[0];
+      usedThirds.add(options[0]);
+    }
+  }
+
+  // Fallback: any qualified third not yet assigned goes to any leader without a match
+  const unassignedLeaders = VARIABLE_LEADERS.filter(l => !leaderVsThird[l]);
+  const unassignedThirds = qualifiedThirdGroups.filter(g => !usedThirds.has(g));
+  unassignedLeaders.forEach((leader, idx) => {
+    if (unassignedThirds[idx]) leaderVsThird[leader] = unassignedThirds[idx];
+  });
+
+  const matches = [];
+  for (const leader of VARIABLE_LEADERS) {
+    const thirdGroup = leaderVsThird[leader];
+    matches.push({
+      home: firsts[leader],
+      away: thirdGroup ? thirds8.find(t => t.group === thirdGroup).name : null,
+      label: `1${leader} vs 3°${thirdGroup || '?'}`
+    });
+  }
+
+  for (const fc of FIXED_R16) {
+    const home = fc.home.t === '1' ? firsts[fc.home.g] : seconds[fc.home.g];
+    const away = fc.away.t === '1' ? firsts[fc.away.g] : seconds[fc.away.g];
+    matches.push({ home, away, label: `${fc.home.t}${fc.home.g} vs ${fc.away.t}${fc.away.g}` });
+  }
+
+  return matches; // 16 matches total
 }
 
 // ============================================================
@@ -627,8 +708,16 @@ function renderPartidosHtml(g) {
       <button class="confirm-btn ${done?'done':''}" onclick="confirmScore('${g}',${idx})">
         ${done ? '✓' : 'OK'}
       </button>
+      ${done ? `<button onclick="resetMatch('${g}',${idx})" style="background:none;border:none;color:#7aab8a;font-size:13px;cursor:pointer;padding:2px 4px;" title="Marcar como no jugado">↺</button>` : ''}
     </div>`;
   }).join('');
+}
+
+function resetMatch(g, idx) {
+  state.grupoMatches[g][idx].gh = null;
+  state.grupoMatches[g][idx].ga = null;
+  saveState();
+  render();
 }
 
 function setScore(g, idx, side, val) {
@@ -749,19 +838,37 @@ function propagateWinner(roundKey, matchIdx, team) {
 function renderBracket16() {
   const c = document.getElementById('bracket16');
   c.innerHTML = '';
+
+  const totalPlayed = Object.values(state.grupoMatches)
+    .reduce((sum, ms) => sum + ms.filter(m => m.gh !== null).length, 0);
+
+  // Run autofill BEFORE rendering so labels/teams are current
+  autoFillR16();
+
   const ronda = document.createElement('div');
   ronda.className = 'ronda';
   ronda.style.minWidth = '520px';
   ronda.innerHTML = `<div class="ronda-title">Dieciseisavos de Final · 32 Equipos</div>`;
+
+  if (totalPlayed < 72) {
+    const notice = document.createElement('div');
+    notice.style.cssText = 'text-align:center;padding:20px;color:var(--muted);font-size:13px;line-height:1.6;';
+    notice.innerHTML = `Faltan partidos de grupo por confirmar (${totalPlayed}/72).<br>
+      Los cruces de 16avos dependen de los 8 mejores terceros lugares,<br>
+      que solo se conocen cuando todos los grupos terminan.`;
+    ronda.appendChild(notice);
+    c.appendChild(ronda);
+    return;
+  }
+
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;';
 
   state.ko.r16.forEach((m, i) => {
     const card = makeMatchCard(m, i, 'r16');
-    // Add label
     const lbl = document.createElement('div');
     lbl.style.cssText = 'font-size:9px;color:#7aab8a;letter-spacing:1px;text-align:center;padding:2px;';
-    lbl.textContent = `Partido ${i+1}`;
+    lbl.textContent = m._label || `Partido ${i+1}`;
     const wrap2 = document.createElement('div');
     wrap2.appendChild(lbl);
     wrap2.appendChild(card);
@@ -770,23 +877,25 @@ function renderBracket16() {
 
   ronda.appendChild(wrap);
   c.appendChild(ronda);
-
-  // Populate from classified if groups done
-  autoFillR16();
 }
 
 function autoFillR16() {
   // Check if all group matches played
   const totalPlayed = Object.values(state.grupoMatches)
     .reduce((sum, ms) => sum + ms.filter(m => m.gh !== null).length, 0);
-  if (totalPlayed < 72) return; // 12 groups × 6 matches
+  if (totalPlayed < 72) return;
+  if (state.r16Filled) return; // only auto-fill once, so manual winners aren't wiped
 
-  const { firsts, seconds } = getClassified();
-  // Predefined R16 slots per FIFA bracket
-  const slots = [
-    [firsts.A, null],[null, seconds.B], // etc - simplified: use group winners/runners-up
-  ];
-  // For now just show what's been manually set
+  const matches = resolveR16Crosses();
+  matches.forEach((m, i) => {
+    if (state.ko.r16[i]) {
+      state.ko.r16[i].home = m.home;
+      state.ko.r16[i].away = m.away;
+      state.ko.r16[i]._label = m.label;
+    }
+  });
+  state.r16Filled = true;
+  saveState();
 }
 
 // ============================================================

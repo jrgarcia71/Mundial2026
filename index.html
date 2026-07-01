@@ -449,32 +449,32 @@
 // DATA
 // ============================================================
 const GRUPOS = {
-  A: { equipos: ['México','Sudáfrica','Corea del Sur','Rep. Checa'] },
+  A: { equipos: ['México','Sudáfrica','Corea del Sur','Chequia'] },
   B: { equipos: ['Canadá','Bosnia y Herz.','Qatar','Suiza'] },
-  C: { equipos: ['Brasil','Marruecos','Escocia','Haití'] },
-  D: { equipos: ['EE.UU.','Australia','Paraguay','Turquía'] },
-  E: { equipos: ['Alemania','Ecuador','Costa de Marfil','Curazao'] },
+  C: { equipos: ['Brasil','Marruecos','Haití','Escocia'] },
+  D: { equipos: ['EE.UU.','Paraguay','Australia','Turquía'] },
+  E: { equipos: ['Alemania','Curazao','Costa de Marfil','Ecuador'] },
   F: { equipos: ['Países Bajos','Japón','Suecia','Túnez'] },
-  G: { equipos: ['Bélgica','Irán','Egipto','Nueva Zelanda'] },
-  H: { equipos: ['España','Uruguay','Arabia Saudí','Cabo Verde'] },
-  I: { equipos: ['Francia','Senegal','Noruega','Irak'] },
-  J: { equipos: ['Argentina','Austria','Argelia','Jordania'] },
-  K: { equipos: ['Portugal','R.D. Congo','Colombia','Uzbekistán'] },
+  G: { equipos: ['Bélgica','Egipto','Irán','Nueva Zelanda'] },
+  H: { equipos: ['España','Cabo Verde','Arabia Saudí','Uruguay'] },
+  I: { equipos: ['Francia','Senegal','Irak','Noruega'] },
+  J: { equipos: ['Argentina','Argelia','Austria','Jordania'] },
+  K: { equipos: ['Portugal','R.D. Congo','Uzbekistán','Colombia'] },
   L: { equipos: ['Inglaterra','Croacia','Ghana','Panamá'] }
 };
 
 const FLAGS = {
-  'México':'🇲🇽','Sudáfrica':'🇿🇦','Corea del Sur':'🇰🇷','Rep. Checa':'🇨🇿',
+  'México':'🇲🇽','Sudáfrica':'🇿🇦','Corea del Sur':'🇰🇷','Chequia':'🇨🇿',
   'Canadá':'🇨🇦','Bosnia y Herz.':'🇧🇦','Qatar':'🇶🇦','Suiza':'🇨🇭',
-  'Brasil':'🇧🇷','Marruecos':'🇲🇦','Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Haití':'🇭🇹',
-  'EE.UU.':'🇺🇸','Australia':'🇦🇺','Paraguay':'🇵🇾','Turquía':'🇹🇷',
-  'Alemania':'🇩🇪','Ecuador':'🇪🇨','Costa de Marfil':'🇨🇮','Curazao':'🇨🇼',
+  'Brasil':'🇧🇷','Marruecos':'🇲🇦','Haití':'🇭🇹','Escocia':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'EE.UU.':'🇺🇸','Paraguay':'🇵🇾','Australia':'🇦🇺','Turquía':'🇹🇷',
+  'Alemania':'🇩🇪','Curazao':'🇨🇼','Costa de Marfil':'🇨🇮','Ecuador':'🇪🇨',
   'Países Bajos':'🇳🇱','Japón':'🇯🇵','Suecia':'🇸🇪','Túnez':'🇹🇳',
-  'Bélgica':'🇧🇪','Irán':'🇮🇷','Egipto':'🇪🇬','Nueva Zelanda':'🇳🇿',
-  'España':'🇪🇸','Uruguay':'🇺🇾','Arabia Saudí':'🇸🇦','Cabo Verde':'🇨🇻',
-  'Francia':'🇫🇷','Senegal':'🇸🇳','Noruega':'🇳🇴','Irak':'🇮🇶',
-  'Argentina':'🇦🇷','Austria':'🇦🇹','Argelia':'🇩🇿','Jordania':'🇯🇴',
-  'Portugal':'🇵🇹','R.D. Congo':'🇨🇩','Colombia':'🇨🇴','Uzbekistán':'🇺🇿',
+  'Bélgica':'🇧🇪','Egipto':'🇪🇬','Irán':'🇮🇷','Nueva Zelanda':'🇳🇿',
+  'España':'🇪🇸','Cabo Verde':'🇨🇻','Arabia Saudí':'🇸🇦','Uruguay':'🇺🇾',
+  'Francia':'🇫🇷','Senegal':'🇸🇳','Irak':'🇮🇶','Noruega':'🇳🇴',
+  'Argentina':'🇦🇷','Argelia':'🇩🇿','Austria':'🇦🇹','Jordania':'🇯🇴',
+  'Portugal':'🇵🇹','R.D. Congo':'🇨🇩','Uzbekistán':'🇺🇿','Colombia':'🇨🇴',
   'Inglaterra':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Croacia':'🇭🇷','Ghana':'🇬🇭','Panamá':'🇵🇦'
 };
 
@@ -488,27 +488,180 @@ function getGrupoMatches(equipos) {
 }
 
 // STATE
-let state = loadState();
+const APP_VERSION = 'v6';
 
 function loadState() {
   try {
     const s = localStorage.getItem('mundial2026');
-    if (s) return JSON.parse(s);
+    if (s) {
+      const parsed = JSON.parse(s);
+      // Si la versión es distinta o los grupos están mal, resetear
+      if (parsed._version !== APP_VERSION) {
+        localStorage.removeItem('mundial2026');
+        return buildInitialState();
+      }
+      return parsed;
+    }
   } catch(e) {}
   return buildInitialState();
 }
 
+// Resultados reales de la fase de grupos (pre-cargados)
+const RESULTADOS_REALES = {
+  A: [ // México, Sudáfrica, Corea del Sur, Chequia
+    { h: 'México',        a: 'Sudáfrica',    gh: 2, ga: 0 }, // J1
+    { h: 'México',        a: 'Corea del Sur',gh: 1, ga: 2 }, // J2
+    { h: 'México',        a: 'Chequia',      gh: 3, ga: 0 }, // J3
+    { h: 'Sudáfrica',     a: 'Corea del Sur',gh: 1, ga: 1 }, // J4
+    { h: 'Sudáfrica',     a: 'Chequia',      gh: null, ga: null }, // pendiente
+    { h: 'Corea del Sur', a: 'Chequia',      gh: 2, ga: 1 }, // J6
+  ],
+  B: [ // Canadá, Bosnia y Herz., Qatar, Suiza
+    { h: 'Canadá',        a: 'Bosnia y Herz.',gh: 1, ga: 1 },
+    { h: 'Canadá',        a: 'Qatar',         gh: null, ga: null },
+    { h: 'Canadá',        a: 'Suiza',         gh: null, ga: null },
+    { h: 'Bosnia y Herz.',a: 'Qatar',         gh: null, ga: null },
+    { h: 'Bosnia y Herz.',a: 'Suiza',         gh: null, ga: null },
+    { h: 'Qatar',         a: 'Suiza',         gh: 1, ga: 1 },
+  ],
+  C: [ // Brasil, Marruecos, Haití, Escocia
+    { h: 'Brasil',    a: 'Marruecos', gh: 1, ga: 1 },
+    { h: 'Brasil',    a: 'Haití',     gh: null, ga: null },
+    { h: 'Brasil',    a: 'Escocia',   gh: 3, ga: 0 },
+    { h: 'Marruecos', a: 'Haití',     gh: null, ga: null },
+    { h: 'Marruecos', a: 'Escocia',   gh: 1, ga: 0 },
+    { h: 'Haití',     a: 'Escocia',   gh: 0, ga: 1 },
+  ],
+  D: [ // EE.UU., Paraguay, Australia, Turquía
+    { h: 'EE.UU.',    a: 'Paraguay',  gh: 4, ga: 1 },
+    { h: 'EE.UU.',    a: 'Australia', gh: null, ga: null },
+    { h: 'EE.UU.',    a: 'Turquía',   gh: null, ga: null },
+    { h: 'Paraguay',  a: 'Australia', gh: null, ga: null },
+    { h: 'Paraguay',  a: 'Turquía',   gh: null, ga: null },
+    { h: 'Australia', a: 'Turquía',   gh: 2, ga: 0 },
+  ],
+  E: [ // Alemania, Curazao, Costa de Marfil, Ecuador
+    { h: 'Alemania',        a: 'Curazao',        gh: 7, ga: 1 },
+    { h: 'Alemania',        a: 'Costa de Marfil',gh: 2, ga: 1 },
+    { h: 'Alemania',        a: 'Ecuador',         gh: null, ga: null },
+    { h: 'Curazao',         a: 'Costa de Marfil', gh: null, ga: null },
+    { h: 'Curazao',         a: 'Ecuador',         gh: null, ga: null },
+    { h: 'Costa de Marfil', a: 'Ecuador',         gh: 1, ga: 0 },
+  ],
+  F: [ // Países Bajos, Japón, Suecia, Túnez
+    { h: 'Países Bajos', a: 'Japón',  gh: 2, ga: 2 },
+    { h: 'Países Bajos', a: 'Suecia', gh: null, ga: null },
+    { h: 'Países Bajos', a: 'Túnez',  gh: null, ga: null },
+    { h: 'Japón',        a: 'Suecia', gh: null, ga: null },
+    { h: 'Japón',        a: 'Túnez',  gh: null, ga: null },
+    { h: 'Suecia',       a: 'Túnez',  gh: 5, ga: 1 },
+  ],
+  G: [ // Bélgica, Egipto, Irán, Nueva Zelanda
+    { h: 'Bélgica',      a: 'Egipto',       gh: 1, ga: 1 },
+    { h: 'Bélgica',      a: 'Irán',         gh: null, ga: null },
+    { h: 'Bélgica',      a: 'Nueva Zelanda', gh: null, ga: null },
+    { h: 'Egipto',       a: 'Irán',         gh: null, ga: null },
+    { h: 'Egipto',       a: 'Nueva Zelanda', gh: null, ga: null },
+    { h: 'Irán',         a: 'Nueva Zelanda', gh: 2, ga: 2 },
+  ],
+  H: [ // España, Cabo Verde, Arabia Saudí, Uruguay
+    { h: 'España',      a: 'Cabo Verde',  gh: 0, ga: 0 },
+    { h: 'España',      a: 'Arabia Saudí',gh: null, ga: null },
+    { h: 'España',      a: 'Uruguay',     gh: null, ga: null },
+    { h: 'Cabo Verde',  a: 'Arabia Saudí',gh: null, ga: null },
+    { h: 'Cabo Verde',  a: 'Uruguay',     gh: null, ga: null },
+    { h: 'Arabia Saudí',a: 'Uruguay',     gh: 1, ga: 1 },
+  ],
+  I: [ // Francia, Senegal, Irak, Noruega
+    { h: 'Francia', a: 'Senegal', gh: 3, ga: 1 },
+    { h: 'Francia', a: 'Irak',    gh: 3, ga: 0 },
+    { h: 'Francia', a: 'Noruega', gh: 4, ga: 1 },
+    { h: 'Senegal', a: 'Irak',    gh: null, ga: null },
+    { h: 'Senegal', a: 'Noruega', gh: null, ga: null },
+    { h: 'Irak',    a: 'Noruega', gh: 4, ga: 1 },
+  ],
+  J: [ // Argentina, Argelia, Austria, Jordania
+    { h: 'Argentina', a: 'Argelia',  gh: null, ga: null },
+    { h: 'Argentina', a: 'Austria',  gh: 2, ga: 0 },
+    { h: 'Argentina', a: 'Jordania', gh: null, ga: null },
+    { h: 'Argelia',   a: 'Austria',  gh: null, ga: null },
+    { h: 'Argelia',   a: 'Jordania', gh: null, ga: null },
+    { h: 'Austria',   a: 'Jordania', gh: null, ga: null },
+  ],
+  K: [ // Portugal, R.D. Congo, Uzbekistán, Colombia
+    { h: 'Portugal',   a: 'R.D. Congo',  gh: null, ga: null },
+    { h: 'Portugal',   a: 'Uzbekistán',  gh: null, ga: null },
+    { h: 'Portugal',   a: 'Colombia',    gh: null, ga: null },
+    { h: 'R.D. Congo', a: 'Uzbekistán',  gh: null, ga: null },
+    { h: 'R.D. Congo', a: 'Colombia',    gh: null, ga: null },
+    { h: 'Uzbekistán', a: 'Colombia',    gh: null, ga: null },
+  ],
+  L: [ // Inglaterra, Croacia, Ghana, Panamá
+    { h: 'Inglaterra', a: 'Croacia', gh: null, ga: null },
+    { h: 'Inglaterra', a: 'Ghana',   gh: null, ga: null },
+    { h: 'Inglaterra', a: 'Panamá',  gh: 2, ga: 0 },
+    { h: 'Croacia',    a: 'Ghana',   gh: null, ga: null },
+    { h: 'Croacia',    a: 'Panamá',  gh: null, ga: null },
+    { h: 'Ghana',      a: 'Panamá',  gh: null, ga: null },
+  ],
+};
+
+const R16_OFICIAL = [
+  { home: 'Canadá',          away: 'Sudáfrica',      winner: 'Canadá' },        // par 1
+  { home: 'Marruecos',       away: 'Países Bajos',   winner: 'Marruecos' },     // par 1 → Canadá vs Marruecos
+  { home: 'Brasil',          away: 'Japón',           winner: 'Brasil' },        // par 2
+  { home: 'Noruega',         away: 'Costa de Marfil', winner: 'Noruega' },      // par 2 → Brasil vs Noruega
+  { home: 'Paraguay',        away: 'Alemania',        winner: 'Paraguay' },      // par 3
+  { home: 'Francia',         away: 'Suecia',          winner: 'Francia' },       // par 3 → Paraguay vs Francia
+  { home: 'México',          away: 'Ecuador',         winner: 'México' },        // par 4
+  { home: 'Inglaterra',      away: 'R.D. Congo',      winner: null },            // par 4 → México vs ganador
+  { home: 'Portugal',        away: 'Croacia',         winner: null },            // par 5
+  { home: 'España',          away: 'Austria',         winner: null },            // par 5
+  { home: 'EE.UU.',          away: 'Bosnia y Herz.',  winner: null },            // par 6
+  { home: 'Bélgica',         away: 'Senegal',         winner: null },            // par 6
+  { home: 'Argentina',       away: 'Cabo Verde',      winner: null },            // par 7
+  { home: 'Australia',       away: 'Egipto',          winner: null },            // par 7
+  { home: 'Suiza',           away: 'Argelia',         winner: null },            // par 8
+  { home: 'Colombia',        away: 'Ghana',           winner: null },            // par 8
+];
+
 function buildInitialState() {
   const grupoMatches = {};
   for (const g in GRUPOS) {
-    grupoMatches[g] = getGrupoMatches(GRUPOS[g].equipos);
+    const real = RESULTADOS_REALES[g];
+    grupoMatches[g] = getGrupoMatches(GRUPOS[g].equipos).map((m) => {
+      const r = real ? real.find(r => r.h === m.home && r.a === m.away) : null;
+      if (r && r.gh !== null) return { ...m, gh: r.gh, ga: r.ga };
+      return m;
+    });
   }
+
+  // Pre-cargar 16avos oficiales
+  const r16 = R16_OFICIAL.map((m, i) => ({
+    id: `r16_${i}`,
+    home: m.home,
+    away: m.away,
+    winner: m.winner,
+    _label: `${m.home} vs ${m.away}`
+  }));
+
+  // Pre-propagar ganadores ya conocidos
+  const r8 = Array(8).fill(null).map((_,i) => ({ id: `r8_${i}`, home: null, away: null, winner: null }));
+  r16.forEach((m, i) => {
+    if (m.winner) {
+      const nextMatch = Math.floor(i / 2);
+      const slot = i % 2 === 0 ? 'home' : 'away';
+      r8[nextMatch][slot] = m.winner;
+    }
+  });
+
   return {
     grupoMatches,
     standings: buildStandings(),
+    r16Filled: true,
     ko: {
-      r16: Array(16).fill(null).map((_,i) => ({ id: `r16_${i}`, home: null, away: null, winner: null })),
-      r8:  Array(8).fill(null).map((_,i) => ({ id: `r8_${i}`,  home: null, away: null, winner: null })),
+      r16,
+      r8,
       r4:  Array(4).fill(null).map((_,i) => ({ id: `r4_${i}`,  home: null, away: null, winner: null })),
       r2:  Array(2).fill(null).map((_,i) => ({ id: `r2_${i}`,  home: null, away: null, winner: null })),
       final: [{ id: 'final_0', home: null, away: null, winner: null }]
@@ -525,8 +678,10 @@ function buildStandings() {
 }
 
 function saveState() {
-  try { localStorage.setItem('mundial2026', JSON.stringify(state)); } catch(e) {}
+  try { localStorage.setItem('mundial2026', JSON.stringify({...state, _version: APP_VERSION})); } catch(e) {}
 }
+
+let state = loadState();
 
 function resetAll() {
   if (!confirm('¿Reiniciar todos los resultados?')) return;
@@ -838,29 +993,12 @@ function propagateWinner(roundKey, matchIdx, team) {
 function renderBracket16() {
   const c = document.getElementById('bracket16');
   c.innerHTML = '';
-
-  const totalPlayed = Object.values(state.grupoMatches)
-    .reduce((sum, ms) => sum + ms.filter(m => m.gh !== null).length, 0);
-
-  // Run autofill BEFORE rendering so labels/teams are current
   autoFillR16();
 
   const ronda = document.createElement('div');
   ronda.className = 'ronda';
   ronda.style.minWidth = '520px';
   ronda.innerHTML = `<div class="ronda-title">Dieciseisavos de Final · 32 Equipos</div>`;
-
-  if (totalPlayed < 72) {
-    const notice = document.createElement('div');
-    notice.style.cssText = 'text-align:center;padding:20px;color:var(--muted);font-size:13px;line-height:1.6;';
-    notice.innerHTML = `Faltan partidos de grupo por confirmar (${totalPlayed}/72).<br>
-      Los cruces de 16avos dependen de los 8 mejores terceros lugares,<br>
-      que solo se conocen cuando todos los grupos terminan.`;
-    ronda.appendChild(notice);
-    c.appendChild(ronda);
-    return;
-  }
-
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;';
 
@@ -880,22 +1018,8 @@ function renderBracket16() {
 }
 
 function autoFillR16() {
-  // Check if all group matches played
-  const totalPlayed = Object.values(state.grupoMatches)
-    .reduce((sum, ms) => sum + ms.filter(m => m.gh !== null).length, 0);
-  if (totalPlayed < 72) return;
-  if (state.r16Filled) return; // only auto-fill once, so manual winners aren't wiped
-
-  const matches = resolveR16Crosses();
-  matches.forEach((m, i) => {
-    if (state.ko.r16[i]) {
-      state.ko.r16[i].home = m.home;
-      state.ko.r16[i].away = m.away;
-      state.ko.r16[i]._label = m.label;
-    }
-  });
-  state.r16Filled = true;
-  saveState();
+  // Los 16avos ya vienen pre-cargados en buildInitialState con datos reales
+  // Esta función solo existe por compatibilidad
 }
 
 // ============================================================

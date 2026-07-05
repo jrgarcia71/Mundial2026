@@ -488,7 +488,7 @@ function getGrupoMatches(equipos) {
 }
 
 // STATE
-const APP_VERSION = 'v6';
+const APP_VERSION = 'v10';
 
 function loadState() {
   try {
@@ -607,22 +607,22 @@ const RESULTADOS_REALES = {
 };
 
 const R16_OFICIAL = [
-  { home: 'Canadá',          away: 'Sudáfrica',      winner: 'Canadá' },        // par 1
-  { home: 'Marruecos',       away: 'Países Bajos',   winner: 'Marruecos' },     // par 1 → Canadá vs Marruecos
-  { home: 'Brasil',          away: 'Japón',           winner: 'Brasil' },        // par 2
-  { home: 'Noruega',         away: 'Costa de Marfil', winner: 'Noruega' },      // par 2 → Brasil vs Noruega
-  { home: 'Paraguay',        away: 'Alemania',        winner: 'Paraguay' },      // par 3
-  { home: 'Francia',         away: 'Suecia',          winner: 'Francia' },       // par 3 → Paraguay vs Francia
-  { home: 'México',          away: 'Ecuador',         winner: 'México' },        // par 4
-  { home: 'Inglaterra',      away: 'R.D. Congo',      winner: null },            // par 4 → México vs ganador
-  { home: 'Portugal',        away: 'Croacia',         winner: null },            // par 5
-  { home: 'España',          away: 'Austria',         winner: null },            // par 5
-  { home: 'EE.UU.',          away: 'Bosnia y Herz.',  winner: null },            // par 6
-  { home: 'Bélgica',         away: 'Senegal',         winner: null },            // par 6
-  { home: 'Argentina',       away: 'Cabo Verde',      winner: null },            // par 7
-  { home: 'Australia',       away: 'Egipto',          winner: null },            // par 7
-  { home: 'Suiza',           away: 'Argelia',         winner: null },            // par 8
-  { home: 'Colombia',        away: 'Ghana',           winner: null },            // par 8
+  { home: 'Canadá',       away: 'Sudáfrica',       winner: 'Canadá' },
+  { home: 'Países Bajos', away: 'Marruecos',        winner: 'Marruecos' },
+  { home: 'Brasil',       away: 'Japón',            winner: 'Brasil' },
+  { home: 'Noruega',      away: 'Costa de Marfil',  winner: 'Noruega' },
+  { home: 'Paraguay',     away: 'Alemania',         winner: 'Paraguay' },
+  { home: 'Francia',      away: 'Suecia',           winner: 'Francia' },
+  { home: 'México',       away: 'Ecuador',          winner: 'México' },
+  { home: 'Inglaterra',   away: 'R.D. Congo',       winner: null },
+  { home: 'Portugal',     away: 'Croacia',          winner: 'Portugal' },
+  { home: 'España',       away: 'Austria',          winner: null },
+  { home: 'EE.UU.',       away: 'Bosnia y Herz.',   winner: 'EE.UU.' },
+  { home: 'Bélgica',      away: 'Senegal',          winner: 'Bélgica' },
+  { home: 'Argentina',    away: 'Cabo Verde',       winner: null },
+  { home: 'Australia',    away: 'Egipto',           winner: null },
+  { home: 'Suiza',        away: 'Argelia',          winner: null },
+  { home: 'Colombia',     away: 'Ghana',            winner: null },
 ];
 
 function buildInitialState() {
@@ -645,15 +645,17 @@ function buildInitialState() {
     _label: `${m.home} vs ${m.away}`
   }));
 
-  // Pre-propagar ganadores ya conocidos
-  const r8 = Array(8).fill(null).map((_,i) => ({ id: `r8_${i}`, home: null, away: null, winner: null }));
-  r16.forEach((m, i) => {
-    if (m.winner) {
-      const nextMatch = Math.floor(i / 2);
-      const slot = i % 2 === 0 ? 'home' : 'away';
-      r8[nextMatch][slot] = m.winner;
-    }
-  });
+  // OCTAVOS - pares 0+1, 2+3, 4+5, 6+7 se ven en cuartos
+  const r8 = [
+    { id:'r8_0', home:'Canadá',     away:'Marruecos',  winner:'Marruecos' },
+    { id:'r8_1', home:'Paraguay',   away:'Francia',    winner:'Francia' },
+    { id:'r8_2', home:'Brasil',     away:'Noruega',    winner:null },
+    { id:'r8_3', home:'México',     away:'Inglaterra', winner:null },
+    { id:'r8_4', home:'Portugal',   away:'España',     winner:null },
+    { id:'r8_5', home:'EE.UU.',     away:'Bélgica',    winner:null },
+    { id:'r8_6', home:'Argentina',  away:'Egipto',     winner:null },
+    { id:'r8_7', home:'Suiza',      away:'Colombia',   winner:null },
+  ];
 
   return {
     grupoMatches,
@@ -662,7 +664,12 @@ function buildInitialState() {
     ko: {
       r16,
       r8,
-      r4:  Array(4).fill(null).map((_,i) => ({ id: `r4_${i}`,  home: null, away: null, winner: null })),
+      r4: [
+        { id:'r4_0', home:'Marruecos', away:'Francia', winner:null },
+        { id:'r4_1', home:null, away:null, winner:null },
+        { id:'r4_2', home:null, away:null, winner:null },
+        { id:'r4_3', home:null, away:null, winner:null },
+      ],
       r2:  Array(2).fill(null).map((_,i) => ({ id: `r2_${i}`,  home: null, away: null, winner: null })),
       final: [{ id: 'final_0', home: null, away: null, winner: null }]
     }

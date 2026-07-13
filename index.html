@@ -488,7 +488,7 @@ function getGrupoMatches(equipos) {
 }
 
 // STATE
-const APP_VERSION = 'v10';
+const APP_VERSION = 'v11';
 
 function loadState() {
   try {
@@ -645,16 +645,36 @@ function buildInitialState() {
     _label: `${m.home} vs ${m.away}`
   }));
 
-  // OCTAVOS - pares 0+1, 2+3, 4+5, 6+7 se ven en cuartos
+  // OCTAVOS - todos los resultados reales
   const r8 = [
     { id:'r8_0', home:'Canadá',     away:'Marruecos',  winner:'Marruecos' },
-    { id:'r8_1', home:'Paraguay',   away:'Francia',    winner:'Francia' },
-    { id:'r8_2', home:'Brasil',     away:'Noruega',    winner:null },
-    { id:'r8_3', home:'México',     away:'Inglaterra', winner:null },
-    { id:'r8_4', home:'Portugal',   away:'España',     winner:null },
-    { id:'r8_5', home:'EE.UU.',     away:'Bélgica',    winner:null },
-    { id:'r8_6', home:'Argentina',  away:'Egipto',     winner:null },
-    { id:'r8_7', home:'Suiza',      away:'Colombia',   winner:null },
+    { id:'r8_1', home:'Paraguay',   away:'Francia',    winner:'Francia'   },
+    { id:'r8_2', home:'Brasil',     away:'Noruega',    winner:'Noruega'   },
+    { id:'r8_3', home:'México',     away:'Inglaterra', winner:'Inglaterra'},
+    { id:'r8_4', home:'Portugal',   away:'España',     winner:'España'    },
+    { id:'r8_5', home:'EE.UU.',     away:'Bélgica',    winner:'Bélgica'   },
+    { id:'r8_6', home:'Argentina',  away:'Egipto',     winner:'Argentina' },
+    { id:'r8_7', home:'Suiza',      away:'Colombia',   winner:'Suiza'     },
+  ];
+
+  // CUARTOS - resultados reales
+  // Par: r8_0+r8_1 → r4_0 (Marruecos vs Francia)
+  // Par: r8_2+r8_3 → r4_1 (Noruega vs Inglaterra)
+  // Par: r8_4+r8_5 → r4_2 (España vs Bélgica)
+  // Par: r8_6+r8_7 → r4_3 (Argentina vs Suiza)
+  const r4 = [
+    { id:'r4_0', home:'Marruecos',  away:'Francia',    winner:'Francia'   },
+    { id:'r4_1', home:'Noruega',    away:'Inglaterra', winner:'Inglaterra'},
+    { id:'r4_2', home:'España',     away:'Bélgica',    winner:'España'    },
+    { id:'r4_3', home:'Argentina',  away:'Suiza',      winner:'Argentina' },
+  ];
+
+  // SEMIFINALES
+  // Par: r4_0+r4_1 → r2_0 (Francia vs Inglaterra)
+  // Par: r4_2+r4_3 → r2_1 (España vs Argentina)
+  const r2 = [
+    { id:'r2_0', home:'Francia',    away:'España',     winner:null },
+    { id:'r2_1', home:'Argentina',  away:'Inglaterra', winner:null },
   ];
 
   return {
@@ -664,13 +684,8 @@ function buildInitialState() {
     ko: {
       r16,
       r8,
-      r4: [
-        { id:'r4_0', home:'Marruecos', away:'Francia', winner:null },
-        { id:'r4_1', home:null, away:null, winner:null },
-        { id:'r4_2', home:null, away:null, winner:null },
-        { id:'r4_3', home:null, away:null, winner:null },
-      ],
-      r2:  Array(2).fill(null).map((_,i) => ({ id: `r2_${i}`,  home: null, away: null, winner: null })),
+      r4,
+      r2,
       final: [{ id: 'final_0', home: null, away: null, winner: null }]
     }
   };
